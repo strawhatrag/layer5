@@ -1,0 +1,104 @@
+---
+title: "Customize Linkerd Proxy Configuration"
+subtitle: "Sidecar Configuration"
+date: 2022-05-21 08:05:00 +0000
+author: Layer5 Team
+thumbnail: ./linkerd-horizontal-color.svg
+category: Linkerd
+tags:
+  - Linkerd
+  - Configuration
+published: true
+resource: true
+---
+
+import { BlogWrapper } from "../../Blog.style.js";
+import Blockquote from "../../../../reusecore/Blockquote";
+import BlockquoteAlt from "../../../../reusecore/Blockquote/Blockquote-alt-style";
+import { Link } from "gatsby";
+
+
+<BlogWrapper>
+
+Kubernetes provides [CPU limits and CPU requests](https://kubernetes.io/docs/tasks/configure-pod-container/assign-cpu-resource/#specify-a-cpu-request-and-a-cpu-limit) to configure the resources assigned to any pod or container. These may also be used to configure the Linkerd proxy's CPU usage. However, depending on how the kubelet is configured, using Kubernetes resource limits rather than the `proxy-cpu-limit` annotation may not be ideal.
+
+<h2>Linkerd Sidecar Customizations</h2>
+<p>
+You can tweak the Linkerd configuration by specifying certain Kubernetes annotations in your application manifest. A list of supported variables are specified in the [Linkerd proxy configuration documentation](https://linkerd.io/2.11/reference/proxy-configuration/).
+</p>
+
+Annotations starting with <code>config.linkerd.io/</code> or <code>config.alpha.linkerd.io/</code> will be propagated to the <code>PodSpec</code>. 
+
+## Example
+Using the [Kubernetes Applications CRD](https://github.com/kubernetes-sigs/application) as an example resource with Pod spec inside: 
+
+```yaml
+apiVersion: k8s/v1alpha1
+kind: Application
+metadata:
+  name: myapplication
+  namespace: myteam
+  annotations:
+    config.linkerd.io/proxy-memory-limit: "400M"
+    config.linkerd.io/proxy-memory-request: "200M"
+    config.alpha.linkerd.io/proxy-wait-before-exit-seconds: "10"
+spec:
+  ...
+
+```
+
+<h3>Supported Kubernetes Annotations for Linkerd</h3>
+<div className="answer">
+<p>Linkerd provides a set of annotations that can be used to override the data plane proxy’s configuration. This is useful for overriding the default configurations of auto-injected proxies.
+
+The following is the list of supported annotations:</p>
+</div>
+
+## Using the `proxy-cpu-limit` Annotation
+
+The simplest way to configure the proxy's thread pool is using the
+`config.linkerd.io/proxy-cpu-limit` annotation. This annotation configures the
+proxy injector to set an environment variable that controls the number of CPU
+cores the proxy will use.
+
+When installing Linkerd using the [`linkerd install` CLI
+command](../install/), the `--proxy-cpu-limit` argument sets this
+annotation globally for all proxies injected by the Linkerd installation. For
+example,
+
+```bash
+linkerd install --proxy-cpu-limit 2 | kubectl apply -f -
+```
+
+For more fine-grained configuration, the annotation may be added to any
+[injectable Kubernetes resource](../../proxy-injection/), such as a namespace, pod,
+or deployment.
+
+For example, the following will configure any proxies in the `my-deployment`
+deployment to use two CPU cores:
+
+```yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: my-deployment
+  # ...
+spec:
+  template:
+    metadata:
+      annotations:
+        config.linkerd.io/proxy-cpu-limit: '1'
+  # ...
+```
+
+<div className="intro">
+  <p>
+    Unlike Kubernetes CPU limits and requests, which can be expressed in milliCPUs, the `proxy-cpu-limit` annotation should be expressed in whole numbers of CPU cores. Fractional values will be rounded up to the nearest whole number.
+  </p>
+</div>
+
+
+
+
+
+</BlogWrapper>
